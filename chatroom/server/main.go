@@ -34,6 +34,26 @@ func readPkg(conn net.Conn) (mes message.Message, err error) {
 	}
 	return
 }
+func writePkg(conn net.Conn) (data []byte, err error) {
+	var pkgLen uint32
+	pkgLen = uint32(len(data))
+	var buf [4]byte
+	binary.BigEndian.PutUint32(buf[:4], pkgLen)
+	_, err = conn.Write(buf[:4])
+	if err != nil {
+		fmt.Println("conn.Write err=", err)
+		return
+	}
+
+	//根据pgkLen 读取消息内容
+	n, err := conn.Write(data)
+	if err != nil || n != int(pgkLen) {
+		fmt.Println("onn.Write err=", err)
+		return
+	}
+
+	return
+}
 
 //编写一个serverPeocesslogin处理登录请求
 
