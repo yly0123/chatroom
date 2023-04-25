@@ -38,16 +38,49 @@ func readPkg(conn net.Conn) (mes message.Message, err error) {
 //编写一个serverPeocesslogin处理登录请求
 
 func serverProcessLogin(conn net.Conn, mes *message.Message) (err error) {
+	var loginMes message.LoginMes
+	err = json.Unmarshal([]byte(mes.Data), &loginMes)
+	if err != nil {
+		fmt.Println("json.Unmarshal err=", err)
+		return
+	}
+	var resMes message.Message
+	resMes.Type = message.LoginResMesType
+	var loginResMes message.LoginResMes
+	if loginMes.UserId == 100 && loginMes.UserPwd == "123456" {
+		loginResMes.Code = 200
+
+	} else {
+		loginResMes.Code = 500
+		loginResMes.Error = "用户或密码错误"
+	}
+	//将loginResMes序列化
+	data, err := json.Marshal(loginResMes)
+	if err != nil {
+		fmt.Println("json.Marshal err=", err)
+		return
+	}
+
+	resMes.Data = string(data)
+
+	data, err = json.Marshal(resMes)
+	if err != nil {
+		fmt.Println("json.Marshal err=", err)
+		return
+	}
+	//发送data,将其封装到writePkg函数
+	err = writePkg(conn, data)
+	return
 
 }
 
 // 编写一个serverProcessMes 函数
 // 功能:根据客户端发送消息种类不同，决定调用哪个函数来处理
-func serverProcessMes(conn net.Conn, mes *message.Message) (err error) {
+func serverProcessMes(conn net.Conn, mes message.Message) (err error) {
 
 	switch mes.Type {
 	case message.LoginMesType:
-		fmt.Println("login")
+		err = serverProcessLogin(conn, mes)
 
 	case message.LoginResMesType:
 		fmt.Println("注册")
@@ -77,8 +110,10 @@ func process(conn net.Conn) {
 			}
 
 		}
-		fmt.Println("mes=", mes)
-
+		err = serverProcessMes(conn, &mes)
+		if err != nil {
+			return
+		}
 	}
 
 }
